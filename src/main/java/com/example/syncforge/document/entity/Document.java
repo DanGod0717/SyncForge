@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 public class Document {
     private Long id;
     private Long ownerUserId;
+    private Long lastEditUserId;
     private String title;
     private String content;
     private Long version;
@@ -15,10 +16,11 @@ public class Document {
     public Document() {
     }
 
-    public Document(Long id, Long ownerUserId, String title, String content, Long version,
+    public Document(Long id, Long ownerUserId, Long lastEditUserId, String title, String content, Long version,
                     Integer isDeleted, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.ownerUserId = ownerUserId;
+        this.lastEditUserId = lastEditUserId;
         this.title = title;
         this.content = content;
         this.version = version;
@@ -41,6 +43,14 @@ public class Document {
 
     public void setOwnerUserId(Long ownerUserId) {
         this.ownerUserId = ownerUserId;
+    }
+
+    public Long getLastEditUserId() {
+        return lastEditUserId;
+    }
+
+    public void setLastEditUserId(Long lastEditUserId) {
+        this.lastEditUserId = lastEditUserId;
     }
 
     public String getTitle() {
@@ -96,6 +106,7 @@ public class Document {
         return "Document{" +
                 "id=" + id +
                 ", ownerUserId=" + ownerUserId +
+                ", lastEditUserId=" + lastEditUserId +
                 ", title='" + title + '\'' +
                 ", content='" + content + '\'' +
                 ", version=" + version +

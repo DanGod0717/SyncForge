@@ -1,5 +1,7 @@
 package com.example.syncforge.common;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -10,7 +12,10 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 //方法返回值会自动转成 JSON
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-// 统一异常处理
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    // 统一异常处理
     @ExceptionHandler(IllegalArgumentException.class)
     public ApiResponse<Void> handleIllegalArgument(IllegalArgumentException ex) {
         //// 处理 IllegalArgumentException 异常（通常是参数不合法时抛出）
@@ -31,7 +36,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ApiResponse<Void> handleException(Exception ex) {
-        // 兜底异常处理（捕获所有未被处理的异常）
-        return ApiResponse.error(500, "Internal server error");
+        log.error("Unhandled exception", ex);
+        return ApiResponse.error(500, "Internal server error: " + ex.getMessage());
     }
 }

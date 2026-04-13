@@ -7,6 +7,7 @@
     <resultMap id="DocumentResultMap" type="com.example.syncforge.document.entity.Document">
         <id property="id" column="id"/>
         <result property="ownerUserId" column="owner_user_id"/>
+        <result property="lastEditUserId" column="last_edit_user_id"/>
         <result property="title" column="title"/>
         <result property="content" column="content"/>
         <result property="version" column="version"/>
@@ -21,13 +22,14 @@
 
     <insert id="insert" parameterType="com.example.syncforge.document.entity.Document"
             useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO documents (owner_user_id, title, content, version, is_deleted)
-        VALUES (#{ownerUserId}, #{title}, #{content}, #{version}, #{isDeleted})
+        INSERT INTO documents (owner_user_id, last_edit_user_id, title, content, version, is_deleted)
+        VALUES (#{ownerUserId}, #{lastEditUserId}, #{title}, #{content}, #{version}, #{isDeleted})
     </insert>
 
     <update id="updateContentByIdAndVersion">
         UPDATE documents
         SET content = #{content},
+            last_edit_user_id = #{lastEditUserId},
             version = version + 1
         WHERE id = #{id}
           AND version = #{version}
@@ -36,8 +38,30 @@
 
     <update id="softDeleteById">
         UPDATE documents
-        SET is_deleted = 1
+        SET is_deleted = 1,
+            last_edit_user_id = #{operatorUserId}
         WHERE id = #{id}
           AND is_deleted = 0
     </update>
+
+    <select id="findMineByUserId" resultMap="DocumentResultMap">
+        SELECT *
+        FROM documents
+        WHERE owner_user_id = #{userId}
+          AND is_deleted = 0
+        ORDER BY updated_at DESC, id DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <select id="findSharedWithMeByUserId" resultMap="DocumentResultMap">
+        SELECT d.*
+        FROM documents d
+                 INNER JOIN document_permissions dp ON d.id = dp.document_id
+        WHERE dp.user_id = #{userId}
+          AND dp.permission_level IN ('editor', 'viewer')
+          AND dp.is_deleted = 0
+          AND d.is_deleted = 0
+        ORDER BY d.updated_at DESC, d.id DESC
+        LIMIT #{offset}, #{size}
+    </select>
 </mapper>

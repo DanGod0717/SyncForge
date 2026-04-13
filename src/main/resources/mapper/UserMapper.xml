@@ -22,6 +22,14 @@
         SELECT * FROM users WHERE username = #{username}
     </select>
 
+    <select id="findByUsernameAndPasswordHash" resultMap="UserResultMap">
+        SELECT *
+        FROM users
+        WHERE username = #{username}
+          AND password_hash = #{passwordHash}
+        LIMIT 1
+    </select>
+
     <insert id="insert" parameterType="com.example.syncforge.user.entity.User"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO users (username, email, password_hash, status)

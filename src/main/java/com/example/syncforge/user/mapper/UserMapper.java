@@ -10,5 +10,8 @@ public interface  UserMapper {
 
     User findByUsername(@Param("username") String username);
 
+    User findByUsernameAndPasswordHash(@Param("username") String username,
+                                       @Param("passwordHash") String passwordHash);
+
     int insert(User user);
 }
