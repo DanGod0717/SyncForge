@@ -5,9 +5,11 @@ import com.example.syncforge.common.ApiResponse;
 import com.example.syncforge.common.PermissionRequest;
 import com.example.syncforge.common.UpdateContentRequest;
 import com.example.syncforge.document.entity.Document;
+import com.example.syncforge.realtime.DocumentRealtimePublisher;
 import com.example.syncforge.document.service.DocumentService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,6 +21,9 @@ public class DocumentController {
     private static final Logger log = LoggerFactory.getLogger(DocumentController.class);
 
     private final DocumentService documentService;
+
+    @Autowired(required = false)
+    private DocumentRealtimePublisher documentRealtimePublisher;
 
     public DocumentController(DocumentService documentService) {
         this.documentService = documentService;
@@ -72,6 +77,11 @@ public class DocumentController {
         boolean updated = documentService.updateContent(id, request.getContent(), request.getVersion(), userId);
         if (!updated) {
             return ApiResponse.error(409, "Document version conflict or document not found");
+        }
+        Document latest = documentService.getById(id);
+        if (documentRealtimePublisher != null && latest != null) {
+            // 更新后广发消息
+            documentRealtimePublisher.publishDocumentUpdated(latest);
         }
         return ApiResponse.success(null);
     }

@@ -7,6 +7,8 @@ public class User {
     private Long id;
     private String username;
     private String email;
+    // 仅用于接收请求中的明文密码，不落库
+    private String password;
     private String passwordHash;
     private Integer status;
     private LocalDateTime createdAt;
@@ -52,6 +54,14 @@ public class User {
 
     public String getPasswordHash() {
         return passwordHash;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     public void setPasswordHash(String passwordHash) {
