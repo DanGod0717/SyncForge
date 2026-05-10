@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.syncforge.document.mapper.DocumentOperationMapper">
+
+    <resultMap id="DocumentOperationResultMap" type="com.example.syncforge.document.entity.DocumentOperation">
+        <id property="id" column="id"/>
+        <result property="documentId" column="document_id"/>
+        <result property="serverVersion" column="server_version"/>
+        <result property="baseVersion" column="base_version"/>
+        <result property="authorUserId" column="author_user_id"/>
+        <result property="clientOpId" column="client_op_id"/>
+        <result property="opType" column="op_type"/>
+        <result property="position" column="position"/>
+        <result property="content" column="content"/>
+        <result property="deleteLength" column="delete_length"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.example.syncforge.document.entity.DocumentOperation" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO document_operations (document_id, server_version, base_version, author_user_id, client_op_id,
+                                         op_type, position, content, delete_length)
+        VALUES (#{documentId}, #{serverVersion}, #{baseVersion}, #{authorUserId}, #{clientOpId},
+                #{opType}, #{position}, #{content}, #{deleteLength})
+    </insert>
+
+    <select id="findAfterVersion" resultMap="DocumentOperationResultMap">
+        SELECT *
+        FROM document_operations
+        WHERE document_id = #{documentId}
+          AND server_version &gt; #{version}
+        ORDER BY server_version ASC
+    </select>
+</mapper>
+
