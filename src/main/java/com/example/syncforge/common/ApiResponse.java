@@ -2,8 +2,11 @@ package com.example.syncforge.common;
 
 public class ApiResponse<T> {
     //统一返回响应
+    // 状态码 200 400 202 402
     private int code;
+    // 返回信息
     private String message;
+    // 返回的数据
     private T data;
 
     public ApiResponse() {

@@ -37,7 +37,7 @@ public class DocumentRealtimePublisher {
         //逐个推送消息 前端接受消息
         messagingTemplate.convertAndSend(destination, DocumentRealtimeEvent.updated(document));
     }
-
+    // 实时操作
     public void publishOtOperation(OtServerEvent event) {
         if (event == null || event.getDocumentId() == null) {
             return;

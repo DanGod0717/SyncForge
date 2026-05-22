@@ -20,6 +20,10 @@
         SELECT * FROM documents WHERE id = #{id} AND is_deleted = 0
     </select>
 
+    <select id="findByIdForUpdate" resultMap="DocumentResultMap">
+        SELECT * FROM documents WHERE id = #{id} AND is_deleted = 0 FOR UPDATE
+    </select>
+
     <insert id="insert" parameterType="com.example.syncforge.document.entity.Document"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO documents (owner_user_id, last_edit_user_id, title, content, version, is_deleted)

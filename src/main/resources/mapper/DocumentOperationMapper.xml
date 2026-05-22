@@ -32,5 +32,31 @@
           AND server_version &gt; #{version}
         ORDER BY server_version ASC
     </select>
-</mapper>
 
+    <select id="findAfterVersionWithLimit" resultMap="DocumentOperationResultMap">
+        SELECT *
+        FROM document_operations
+        WHERE document_id = #{documentId}
+          AND server_version &gt; #{version}
+        ORDER BY server_version ASC
+        LIMIT #{limit}
+    </select>
+
+    <select id="findBetweenVersions" resultMap="DocumentOperationResultMap">
+        SELECT *
+        FROM document_operations
+        WHERE document_id = #{documentId}
+          AND server_version &gt; #{fromVersion}
+          AND server_version &lt;= #{toVersion}
+        ORDER BY server_version ASC
+    </select>
+
+    <select id="findByClientOp" resultMap="DocumentOperationResultMap">
+        SELECT *
+        FROM document_operations
+        WHERE document_id = #{documentId}
+          AND author_user_id = #{authorUserId}
+          AND client_op_id = #{clientOpId}
+        LIMIT 1
+    </select>
+</mapper>

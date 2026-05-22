@@ -15,6 +15,7 @@ public class AuthInterceptor implements HandlerInterceptor {
 //这里的 AuthInterceptor 作用是 验证用户是否已登录（JWT），并把用户ID放进 AuthContext
 
     private final JwtUtil jwtUtil;
+    //ObjectMapper 是 Jackson 库的核心类，用于将 Java 对象转换为 JSON 字符串。
     private final ObjectMapper objectMapper;
 
     public AuthInterceptor(JwtUtil jwtUtil, ObjectMapper objectMapper) {

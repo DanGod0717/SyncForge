@@ -16,26 +16,29 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Component
+//Spring Messaging 提供的通道拦截器接口，可以拦截客户端发送到服务端的每一条消息（preSend 方法）。
 public class StompAuthChannelInterceptor implements ChannelInterceptor {
 // websocket 握手通过后，STOMP消息进入服务端再次做权限检查，补充握手拦截去 JwtHandshakeInterceptor 不能覆盖的场景，比如用户连接后被禁用，或者用户被移除文档访问权限等
     private static final Pattern DOCUMENT_TOPIC_PATTERN = Pattern.compile("^/topic/documents/(\\d+)(/ops)?$");
     private static final Pattern DOCUMENT_OP_SEND_PATTERN = Pattern.compile("^/app/documents/(\\d+)/ops$");
 
     private final DocumentService documentService;
-
+    // 注入document操作
     public StompAuthChannelInterceptor(DocumentService documentService) {
         this.documentService = documentService;
     }
-    // 核心入口 提取发送用户和发送的目的地文档
+    // 发送之前的处理
+    //每条客户端发来的消息都会先经过此方法。它根据 STOMP 命令（CONNECT、SUBSCRIBE、SEND）执行不同的校验逻辑
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
-        // 解析消息头，拿到STOMP命令和目的地
+        //将原始 Message 转换为 StompHeaderAccessor，方便读取 STOMP 协议字段（命令、目的地、会话属性等）
+        //如果不是标准 STOMP 消息（如心跳），直接放行
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
-        //不是标准 STOMP 命令就放过。
+        // 心跳或者为空 放行
         if (accessor == null || accessor.getCommand() == null) {
             return message;
         }
-        // 处理connect
+        // 处理connect命令
         // 客户端建立STOMP会话时认证用户身份。
         if (StompCommand.CONNECT.equals(accessor.getCommand())) {
             // 尝试拿到当前连接的用户id
@@ -49,14 +52,15 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
             return message;
         }
         // 处理 subscribe
-
         if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
+            // 得到user
             Long userId = resolveUserId(accessor);
             if (userId == null) {
                 // 拿不到用户id 就拒绝
                 throw new IllegalArgumentException("Unauthorized websocket subscribe");
             }
             // 从订阅地址解析出文档id，验证用户是否有权限订阅这个文档的更新
+            // 用户要订阅的地址。
             Long documentId = parseDocumentId(accessor.getDestination());
             if (documentId == null) {
                 return message;
@@ -71,12 +75,13 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
                 throw new IllegalArgumentException("Forbidden websocket subscribe");
             }
         }
-
+        // 发送信息
         if (StompCommand.SEND.equals(accessor.getCommand())) {
             Long userId = resolveUserId(accessor);
             if (userId == null) {
                 throw new IllegalArgumentException("Unauthorized websocket send");
             }
+            //
             Long documentId = parseDocumentIdFromSendDestination(accessor.getDestination());
             if (documentId == null) {
                 return message;
@@ -85,6 +90,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
             if (document == null) {
                 throw new IllegalArgumentException("Document not found");
             }
+            // 是否可以修改 可以修改就放行
             if (!documentService.canEdit(userId, document)) {
                 throw new IllegalArgumentException("Forbidden websocket edit");
             }
@@ -118,7 +124,9 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
         }
         return null;
     }
-    //从 STOMP 订阅/发送路径中 解析 documentId
+
+    // 用于订阅文档，然后实时获取更新
+    //前端订阅实时更新：/topic/documents/123/ops
     private Long parseDocumentId(String destination) {
         if (destination == null) {
             //防止空指针
@@ -135,7 +143,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
         //正则第一个括号捕获的是 documentId
         return Long.valueOf(matcher.group(1));
     }
-
+    //前端发送操作：/app/documents/123/ops 更新文档
     private Long parseDocumentIdFromSendDestination(String destination) {
         if (destination == null) {
             return null;

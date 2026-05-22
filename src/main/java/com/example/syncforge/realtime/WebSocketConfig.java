@@ -11,6 +11,7 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @EnableWebSocketMessageBroker
 // 标记这是 WebSocket 配置类
 // 实现 WebSocketMessageBrokerConfigurer 用于配置 STOMP WebSocket
+//启用 WebSocket 的消息代理（Message Broker）功能。它底层会配置一个 STOMP 协议的消息处理器，
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     // JWT 握手拦截器：在“建立 WebSocket 连接之前”做登录校验

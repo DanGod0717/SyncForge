@@ -9,6 +9,7 @@ import java.util.List;
 @Mapper
 public interface DocumentMapper {
     Document findById(@Param("id") Long id);
+    Document findByIdForUpdate(@Param("id") Long id);
     // 插入文档
     int insert(Document document);
     // 更新内容

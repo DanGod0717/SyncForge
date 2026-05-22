@@ -3,12 +3,12 @@ package com.example.syncforge.auth;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-
+// 配置类
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
     // 配置拦截器
     private final AuthInterceptor authInterceptor;
-
+    // 初始化
     public WebMvcConfig(AuthInterceptor authInterceptor) {
         this.authInterceptor = authInterceptor;
     }

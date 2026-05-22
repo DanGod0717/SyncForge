@@ -5,7 +5,11 @@ import com.example.syncforge.common.ApiResponse;
 import com.example.syncforge.common.PermissionRequest;
 import com.example.syncforge.common.UpdateContentRequest;
 import com.example.syncforge.document.entity.Document;
+import com.example.syncforge.document.entity.DocumentOperation;
+import com.example.syncforge.document.entity.DocumentSnapshot;
+import com.example.syncforge.document.service.DocumentOtService;
 import com.example.syncforge.document.service.DocumentService;
+import com.example.syncforge.document.service.DocumentSnapshotService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -25,6 +30,12 @@ class DocumentControllerTest {
 
     @Mock
     private DocumentService documentService;
+
+    @Mock
+    private DocumentOtService documentOtService;
+
+    @Mock
+    private DocumentSnapshotService documentSnapshotService;
 
     @InjectMocks
     private DocumentController documentController;
@@ -159,7 +170,7 @@ class DocumentControllerTest {
     @Test
     void getSharedWithMeShouldReturnAccessibleDocuments() {
         AuthContext.setUserId(8L);
-        List<Document> documents = Arrays.asList(buildDoc(200L, 1L));
+        List<Document> documents = Collections.singletonList(buildDoc(200L, 1L));
         when(documentService.listSharedWithMe(8L, null, null)).thenReturn(documents);
 
         ApiResponse<List<Document>> response = documentController.getSharedWithMe(null, null);
@@ -167,6 +178,115 @@ class DocumentControllerTest {
         assertEquals(200, response.getCode());
         assertNotNull(response.getData());
         assertEquals(Long.valueOf(200L), response.getData().get(0).getId());
+    }
+
+    @Test
+    void getOperationsAfterVersionShouldReturn400ForNegativeVersion() {
+        AuthContext.setUserId(1L);
+        when(documentOtService.listOperationsAfterVersion(60L, 1L, -1L, null))
+                .thenThrow(new IllegalArgumentException("afterVersion is required and must be >= 0"));
+
+        ApiResponse<List<DocumentOperation>> response = documentController.getOperationsAfterVersion(60L, -1L, null);
+
+        assertEquals(400, response.getCode());
+    }
+
+    @Test
+    void getOperationsAfterVersionShouldReturn400ForInvalidLimit() {
+        AuthContext.setUserId(1L);
+        when(documentOtService.listOperationsAfterVersion(60L, 1L, 0L, 2000))
+                .thenThrow(new IllegalArgumentException("limit must be between 1 and 1000"));
+
+        ApiResponse<List<DocumentOperation>> response = documentController.getOperationsAfterVersion(60L, 0L, 2000);
+
+        assertEquals(400, response.getCode());
+    }
+
+    @Test
+    void getOperationsAfterVersionShouldReturn403WhenNoReadPermission() {
+        AuthContext.setUserId(2L);
+        when(documentOtService.listOperationsAfterVersion(61L, 2L, 3L, null))
+                .thenThrow(new IllegalArgumentException("No permission to read this document"));
+
+        ApiResponse<List<DocumentOperation>> response = documentController.getOperationsAfterVersion(61L, 3L, null);
+
+        assertEquals(403, response.getCode());
+    }
+
+    @Test
+    void getOperationsAfterVersionShouldReturnOperationList() {
+        AuthContext.setUserId(3L);
+
+        DocumentOperation op = new DocumentOperation();
+        op.setDocumentId(62L);
+        op.setServerVersion(4L);
+        op.setClientOpId("op-1");
+
+        when(documentOtService.listOperationsAfterVersion(62L, 3L, 1L, 200))
+                .thenReturn(Collections.singletonList(op));
+
+        ApiResponse<List<DocumentOperation>> response = documentController.getOperationsAfterVersion(62L, 1L, 200);
+
+        assertEquals(200, response.getCode());
+        assertEquals(1, response.getData().size());
+        assertEquals(Long.valueOf(4L), response.getData().get(0).getServerVersion());
+    }
+
+    @Test
+    void getLatestStateShouldReturnDocumentForReadableUser() {
+        AuthContext.setUserId(1L);
+        Document doc = buildDoc(15L, 1L);
+        when(documentService.getById(15L)).thenReturn(doc);
+        when(documentService.canRead(1L, doc)).thenReturn(true);
+
+        ApiResponse<Document> response = documentController.getLatestState(15L);
+
+        assertEquals(200, response.getCode());
+        assertEquals(Long.valueOf(15L), response.getData().getId());
+    }
+
+    @Test
+    void getLatestStateShouldReturn404WhenDocumentNotFound() {
+        AuthContext.setUserId(1L);
+        when(documentService.getById(16L)).thenReturn(null);
+
+        ApiResponse<Document> response = documentController.getLatestState(16L);
+
+        assertEquals(404, response.getCode());
+    }
+
+    @Test
+    void getLatestSnapshotShouldReturnSnapshotWhenReadable() {
+        AuthContext.setUserId(1L);
+        Document doc = buildDoc(70L, 1L);
+        DocumentSnapshot snapshot = new DocumentSnapshot();
+        snapshot.setDocumentId(70L);
+        snapshot.setSnapshotVersion(200L);
+        snapshot.setContent("Hello");
+
+        when(documentService.getById(70L)).thenReturn(doc);
+        when(documentService.canRead(1L, doc)).thenReturn(true);
+        when(documentSnapshotService.getLatestSnapshotBeforeVersion(70L, 200L)).thenReturn(snapshot);
+
+        ApiResponse<DocumentSnapshot> response = documentController.getLatestSnapshot(70L, 200L);
+
+        assertEquals(200, response.getCode());
+        assertEquals(Long.valueOf(200L), response.getData().getSnapshotVersion());
+    }
+
+    @Test
+    void reconstructContentShouldReturnContentWhenReadable() {
+        AuthContext.setUserId(1L);
+        Document doc = buildDoc(71L, 1L);
+
+        when(documentService.getById(71L)).thenReturn(doc);
+        when(documentService.canRead(1L, doc)).thenReturn(true);
+        when(documentSnapshotService.reconstructContent(71L, 205L)).thenReturn("ABC");
+
+        ApiResponse<String> response = documentController.reconstructContent(71L, 205L);
+
+        assertEquals(200, response.getCode());
+        assertEquals("ABC", response.getData());
     }
 
     private Document buildDoc(Long id, Long ownerId) {

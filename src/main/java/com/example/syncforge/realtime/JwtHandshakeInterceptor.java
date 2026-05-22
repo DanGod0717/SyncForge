@@ -15,16 +15,21 @@ import java.util.Map;
 
 @Component
 public class JwtHandshakeInterceptor implements HandshakeInterceptor {
+    //HandshakeInterceptor：Spring WebSocket 提供的握手拦截器接口，可以在
+    // WebSocket 连接建立 之前（beforeHandshake）和 之后（afterHandshake）插入自定义逻辑。
+
 // WebSocket握手阶段的JWT鉴权 握手拦截器 在webSocket连接建立前后
     // 定义一个固定key，把登录id存入会话属性，后面的CONNECT/SUBSCRIBE可以读出来
+
+    //该字符串用作 握手属性（attributes） 中的键名，用于存储从 JWT 解析出的用户 ID。
     public static final String ATTR_USER_ID = "wsUserId";
-// 注入jwtUtil
+    // 注入jwtUtil
     private final JwtUtil jwtUtil;
 
     public JwtHandshakeInterceptor(JwtUtil jwtUtil) {
         this.jwtUtil = jwtUtil;
     }
-
+    // 握手之前验证有合法的用户才能建立 WebSocket 连接，并将用户 ID 传递到会话中。。
     @Override
     public boolean beforeHandshake(ServerHttpRequest request,
                                    ServerHttpResponse response,

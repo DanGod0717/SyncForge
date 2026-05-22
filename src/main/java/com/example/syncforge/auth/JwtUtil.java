@@ -28,31 +28,42 @@ public class JwtUtil {
     //如果密钥不足 32 字节，就补齐（保证安全）
     @PostConstruct
     public void init() {
+        //配置文件中的字符串密钥 jwtSecret 转换为 JWT 签名/验签所需要的 SecretKey 对象。
         byte[] bytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
-        // HMAC key must be >= 32 bytes for HS256.
-        this.key = Keys.hmacShaKeyFor(bytes.length >= 32 ? bytes : (jwtSecret + "-padding-to-32-bytes").getBytes(StandardCharsets.UTF_8));
+        // 转为适用于hmac算法的 secretKey
+        this.key = Keys.hmacShaKeyFor(
+                bytes.length>=32? bytes : (jwtSecret+"-padding-to-32-bytes").getBytes(StandardCharsets.UTF_8)
+        );
     }
     // 产生token
     public String generateToken(User user) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + expireMs);
 
-        return Jwts.builder()
-                .setSubject(String.valueOf(user.getId())) // 将用户ID作为主题
-                .claim("username", user.getUsername())  // 额外信息
-                .setIssuedAt(now)   // 签发时间
-                .setExpiration(expiry)  //过期时间
-                .signWith(key, SignatureAlgorithm.HS256) //用key和HS256签名
-                .compact(); //最终生成
+        String token = Jwts.builder()
+                .setSubject(String.valueOf(user.getId())) // userId 作为 subject
+                .claim("username", user.getUsername()) // 可选：把用户名也放进 token 里
+                .setIssuedAt(now)
+                .setExpiration(expiry)
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
+        return token;
     }
     // 解析token
     public Long parseUserId(String token) {
         Claims claims = Jwts.parserBuilder()
-                .setSigningKey(key) // 校验前面
+                .setSigningKey(key)
                 .build()
-                .parseClaimsJws(token)// 解析token
-                .getBody();
+                .parseClaimsJws(token).getBody();
+
         return Long.valueOf(claims.getSubject()); //取出 userId
+    }
+
+    public String parseUsername(String token){
+        Claims claims= Jwts.parserBuilder()
+                .setSigningKey(key).build()
+                .parseClaimsJws(token).getBody();
+        return String.valueOf(claims.get("username", String.class));
     }
 }
 

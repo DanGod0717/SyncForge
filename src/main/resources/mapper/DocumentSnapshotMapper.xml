@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.syncforge.document.mapper.DocumentSnapshotMapper">
+
+    <resultMap id="DocumentSnapshotResultMap" type="com.example.syncforge.document.entity.DocumentSnapshot">
+        <id property="id" column="id"/>
+        <result property="documentId" column="document_id"/>
+        <result property="snapshotVersion" column="snapshot_version"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="contentHash" column="content_hash"/>
+        <result property="createdBy" column="created_by"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.example.syncforge.document.entity.DocumentSnapshot" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO document_snapshots (document_id, snapshot_version, title, content, content_hash, created_by)
+        VALUES (#{documentId}, #{snapshotVersion}, #{title}, #{content}, #{contentHash}, #{createdBy})
+    </insert>
+
+    <select id="findByDocumentIdAndSnapshotVersion" resultMap="DocumentSnapshotResultMap">
+        SELECT *
+        FROM document_snapshots
+        WHERE document_id = #{documentId}
+          AND snapshot_version = #{snapshotVersion}
+        LIMIT 1
+    </select>
+
+    <select id="findLatestBeforeVersion" resultMap="DocumentSnapshotResultMap">
+        SELECT *
+        FROM document_snapshots
+        WHERE document_id = #{documentId}
+          AND snapshot_version &lt;= #{snapshotVersion}
+        ORDER BY snapshot_version DESC
+        LIMIT 1
+    </select>
+
+    <select id="findByDocumentId" resultMap="DocumentSnapshotResultMap">
+        SELECT *
+        FROM document_snapshots
+        WHERE document_id = #{documentId}
+        ORDER BY snapshot_version DESC, id DESC
+    </select>
+</mapper>
+
