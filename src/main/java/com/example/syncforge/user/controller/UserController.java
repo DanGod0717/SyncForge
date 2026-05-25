@@ -4,6 +4,7 @@ package com.example.syncforge.user.controller;
 import com.example.syncforge.common.ApiResponse;
 import com.example.syncforge.auth.JwtUtil;
 import com.example.syncforge.user.dto.LoginRequest;
+import com.example.syncforge.user.dto.RefreshTokenRequest;
 import com.example.syncforge.user.dto.UserResponse;
 import com.example.syncforge.user.entity.User;
 import com.example.syncforge.user.service.UserService;
@@ -29,7 +30,6 @@ public class UserController {
         if (user == null) {
             return ApiResponse.error(404, "User not found");
         }
-        // 格式化返回 user
         return ApiResponse.success(UserResponse.from(user));
     }
 
@@ -39,9 +39,9 @@ public class UserController {
         if (user == null) {
             return ApiResponse.error(404, "User not found");
         }
-        // 格式化返回 user
         return ApiResponse.success(UserResponse.from(user));
     }
+
     // 创建用户 register
     @PostMapping
     public ApiResponse<UserResponse> create(@RequestBody User user) {
@@ -58,9 +58,9 @@ public class UserController {
         if (affected <= 0) {
             return ApiResponse.error(500, "Create user failed");
         }
-        // 注册成功返回
         return ApiResponse.success(UserResponse.from(user));
     }
+
     // 登录
     @PostMapping("/login")
     public ApiResponse<Map<String, Object>> login(@RequestBody LoginRequest request) {
@@ -68,24 +68,60 @@ public class UserController {
         if (request == null || request.getUsername() == null || resolvedPassword == null) {
             return ApiResponse.error(400, "username and password are required");
         }
-        // 先获得请求的姓名和密码 进行登录
+
         User user = userService.login(request.getUsername(), resolvedPassword);
-        // 如果没有则失败
         if (user == null) {
             return ApiResponse.error(401, "Invalid username or password");
         }
-        // 将user转为token
-        String token = jwtUtil.generateToken(user);
-        // 放主要信息
-        Map<String, Object> payload = new HashMap<String, Object>();
-        payload.put("token", token);
+
+        String accessToken = jwtUtil.generateToken(user);
+        String refreshToken = userService.issueRefreshToken(user);
+
+        Map<String, Object> payload = new HashMap<>();
+        // 兼容旧前端：token 字段仍返回 access token
+        payload.put("token", accessToken);
+        payload.put("accessToken", accessToken);
+        payload.put("refreshToken", refreshToken);
         payload.put("userId", user.getId());
         payload.put("username", user.getUsername());
         return ApiResponse.success(payload);
     }
 
+    @PostMapping("/refresh")
+    public ApiResponse<Map<String, Object>> refresh(@RequestBody RefreshTokenRequest request) {
+        String refreshToken = request == null ? null : request.getRefreshToken();
+        if (refreshToken == null || refreshToken.trim().isEmpty()) {
+            return ApiResponse.error(400, "refreshToken is required");
+        }
+
+        try {
+            String accessToken = userService.refreshAccessToken(refreshToken);
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("token", accessToken);
+            payload.put("accessToken", accessToken);
+            return ApiResponse.success(payload);
+        } catch (IllegalArgumentException ex) {
+            return ApiResponse.error(401, ex.getMessage());
+        }
+    }
+
+    @PostMapping("/quit")
+    public ApiResponse<Map<String, Object>> quit(@RequestBody(required = false) RefreshTokenRequest request) {
+        try {
+            if (request != null && request.getRefreshToken() != null && !request.getRefreshToken().trim().isEmpty()) {
+                userService.revokeRefreshToken(request.getRefreshToken());
+            }
+        } catch (Exception ignored) {
+            // Logout should be idempotent. Client still needs to clear local tokens.
+        }
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("message", "Logged out");
+        payload.put("action", "Please remove accessToken/refreshToken on client side");
+        return ApiResponse.success(payload);
+    }
+
     private String resolvePassword(User user) {
-        //使用password 明文还是加密后的
         if (user.getPassword() != null && !user.getPassword().trim().isEmpty()) {
             return user.getPassword();
         }
